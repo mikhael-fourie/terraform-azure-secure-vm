@@ -1,69 +1,67 @@
-## Project Overview
-This repository contains a **Terraform project for deploying a virtual machine (VM) on Azure**.  
-It demonstrates Infrastructure as Code (IaC) skills, including VM provisioning, network configuration, and managing Azure resources programmatically.
+# Terraform Azure Secure VM
+
+Deploys a secure Linux virtual machine on Microsoft Azure using Terraform.
+Covers network configuration, security hardening, and infrastructure
+provisioning entirely through code.
 
 ---
 
-## Contents
-- `main.tf` – Terraform configuration for VM, network interface, and related resources.  
-- `variables.tf` – Input variables for the project.  
-- `outputs.tf` – Outputs such as public IP and VM name.  
-- `.gitignore` – Ensures sensitive files (state, credentials, providers) are not pushed.  
+## Infrastructure
+
+- **Resource Group** — scoped deployment container
+- **Virtual Network + Subnet** — isolated network (10.0.0.0/16)
+- **Network Security Group** — SSH access restricted to a single
+  authorised IP address
+- **Static Public IP** — Standard SKU
+- **Linux VM** — Ubuntu 22.04 LTS, SSH key authentication only,
+  no password access
+
+---
+
+## Files
+
+| File | Description |
+|---|---|
+| `main.tf` | Core infrastructure — VM, network, NSG, public IP |
+| `variables.tf` | Input variables for admin username and SSH public key |
+| `outputs.tf` | Outputs public IP address and VM name |
+| `.gitignore` | Excludes state files, credentials, and provider binaries |
 
 ---
 
 ## Usage
-1. Install [Terraform](https://www.terraform.io/downloads).  
-2. Install [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli).  
-3. Authenticate with Azure:
-    ```bash
-    az login
-    ```
-4. Initialize Terraform:
-    ```bash
-    terraform init
-    ```
-5. Plan deployment:
-    ```bash
-    terraform plan
-    ```
-6. Apply deployment:
-    ```bash
-    terraform apply
-    ```
+
+1. Install [Terraform](https://www.terraform.io/downloads) and
+   [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+2. Authenticate: `az login`
+3. Initialise: `terraform init`
+4. Preview: `terraform plan`
+5. Deploy: `terraform apply`
 
 ---
 
-## Errors Encountered
-During development and deployment, the following errors were observed (deduplicated):
+## Troubleshooting
 
-### 1. Quota Exceeded
-Operation could not be completed as it results in exceeding approved Standard_Bpsv2Family Cores quota.
+### Quota exceeded
+Certain VM sizes exceed free tier core quotas. Resolved by selecting
+a size within the available subscription quota.
 
-Cause: Subscription limits exceeded for the requested VM size.
-Resolution: Adjusted VM size to fit within available quota.
+### NSG attachment error
+The `network_security_group_id` argument is unsupported directly on
+the NIC resource in some provider versions. Resolved by using a
+separate `azurerm_network_interface_security_group_association` block.
 
-### 2. Unsupported Argument
-Error: Unsupported argument
-on main.tf line 63, in resource "azurerm_network_interface" "vm_nic":
-network_security_group_id = azurerm_network_security_group.nsg.id
+### SSH connection refused
+Caused by NSG rules not permitting port 22, or public IP not yet
+assigned. Resolved by verifying NSG inbound rules and confirming
+static IP allocation.
 
-Cause: Argument not valid for the provider version used.
-Resolution: Attached NSG through the ip_configuration block instead.
+### Provider binaries in version control
+`.terraform/` directory was committed unintentionally. Resolved by
+adding it to `.gitignore` before subsequent pushes.
 
-### 3. DeploymentFailed
-At least one resource deployment operation failed.
+---
 
-Cause: Missing dependent resources or invalid references.
-Resolution: Verified resource names, dependencies, and ensured the resource group exists.
+## Stack
 
-### 4. SSH / Access Issues
-ssh -i <key> user@<ip> fails / connection refused
-
-Cause: NSG rules or public IP not properly configured.
-Resolution: Updated NSG rules to allow port 22 and confirmed the public IP assignment.
-
-### 5.  Provider / Local Environment
-.local/.terraform/providers folder present
-
-Resolution: Added .terraform/ to .gitignore to avoid pushing local binaries.
+Azure · Terraform · Linux · SSH · IAM
